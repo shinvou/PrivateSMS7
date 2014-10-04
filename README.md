@@ -2,7 +2,7 @@
 ## Hide your chat history
 
 ### Intro
-HiddenCallLog7 is a jailbreak extension for iOS that allows users to hide their chat history in MobileSMS.app. While active a user also can't compose a message or search for old conversations.
+PrivateSMS7 is a jailbreak extension for iOS that allows users to hide their chat history in MobileSMS.app. While active a user also can't compose a message or search for old conversations.
 
 ### How do I PrivateSMS7?
 Just install the tweak and toggle via Edit -> Hide/Unhide. In the settings you can choose whether Hidden/Unhidden state will be saved or not.
