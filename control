@@ -1,8 +1,8 @@
 Package: com.shinvou.PrivateSMS7
 Name: PrivateSMS7
 Depends: mobilesubstrate
-Version: 1.0
+Version: 1.1
 Architecture: iphoneos-arm
-Description: Hide the conversations in MobileSMS.
+Description: PrivateSMS7
 Author: Timm Kandziora
 Section: Tweaks

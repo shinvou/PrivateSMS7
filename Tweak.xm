@@ -6,8 +6,6 @@
 //  Copyright (c) 2014 Timm Kandziora. All rights reserved.
 //
 
-#import <substrate.h>
-
 @interface CKConversationListController : UIViewController <UITableViewDataSource, UITableViewDelegate> {
     UITableView *_table;
 }
@@ -20,13 +18,16 @@
 - (BOOL)searchBarShouldBeginEditing:(id)arg1;
 @end
 
+#define settingsPath @"/var/mobile/Library/Preferences/com.shinvou.privatesms7.plist"
+
 static BOOL hidden = YES;
+static BOOL saveState = NO;
 static UIBarButtonItem *switchButton = nil;
 static UIBarButtonItem *composeButton = nil;
 
 %hook CKConversationListController
 
-%new - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath*)indexPath
+%new - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     if (hidden) {
         return 0.0;
@@ -38,7 +39,7 @@ static UIBarButtonItem *composeButton = nil;
 - (id)tableView:(id)view cellForRowAtIndexPath:(id)indexPath
 {
     if (hidden) {
-        UITableViewCell *cell = [[UITableViewCell alloc] init];
+        UITableViewCell *cell = [[[UITableViewCell alloc] init] autorelease];
         cell.selectionStyle = UITableViewCellSelectionStyleNone;
 
         return cell;
@@ -52,7 +53,7 @@ static UIBarButtonItem *composeButton = nil;
     %orig;
 
     if (editing) {
-        if(switchButton) {
+        if (switchButton) {
             switchButton.title = (hidden) ? @"Unhide" : @"Hide";
         } else {
             composeButton = [[self navigationItem].rightBarButtonItem retain];
@@ -78,6 +79,14 @@ static UIBarButtonItem *composeButton = nil;
 %new - (void)switch
 {
     hidden = !hidden;
+
+    if (saveState) {
+        NSMutableDictionary *settings = [[NSMutableDictionary alloc] initWithContentsOfFile:settingsPath];
+        [settings setObject:[NSNumber numberWithBool:hidden] forKey:@"isHidden"];
+        [settings writeToFile:settingsPath atomically:YES];
+        [settings release];
+    }
+
     [self setEditing:NO animated:YES];
     UITableView *tableView = MSHookIvar<UITableView *>(self, "_table");
     [tableView reloadData];
@@ -97,3 +106,57 @@ static UIBarButtonItem *composeButton = nil;
 }
 
 %end
+
+static void ReloadSettings()
+{
+    NSMutableDictionary *settings = [[NSMutableDictionary alloc] initWithContentsOfFile:settingsPath];
+
+    if (settings) {
+        if ([settings objectForKey:@"saveState"]) {
+            system("killall -9 MobileSMS");
+
+            saveState = [[settings objectForKey:@"saveState"] boolValue];
+
+            if (saveState) {
+                if ([settings objectForKey:@"isHidden"]) {
+                    hidden = [[settings objectForKey:@"isHidden"] boolValue];
+                } else {
+                    [settings setObject:[NSNumber numberWithBool:YES] forKey:@"isHidden"];
+                    [settings writeToFile:settingsPath atomically:YES];
+                }
+            }
+        }
+    }
+
+    [settings release];
+}
+
+static void ReloadSettingsOnStartup()
+{
+    NSMutableDictionary *settings = [[NSMutableDictionary alloc] initWithContentsOfFile:settingsPath];
+
+    if (settings) {
+        if ([settings objectForKey:@"saveState"]) {
+            saveState = [[settings objectForKey:@"saveState"] boolValue];
+
+            if (saveState) {
+                if ([settings objectForKey:@"isHidden"]) {
+                    hidden = [[settings objectForKey:@"isHidden"] boolValue];
+                } else {
+                    [settings setObject:[NSNumber numberWithBool:YES] forKey:@"isHidden"];
+                    [settings writeToFile:settingsPath atomically:YES];
+                }
+            }
+        }
+    }
+
+    [settings release];
+}
+
+%ctor {
+	@autoreleasepool {
+		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)ReloadSettings, CFSTR("com.shinvou.privatesms7/reloadSettings"), NULL, CFNotificationSuspensionBehaviorCoalesce);
+
+		ReloadSettingsOnStartup();
+	}
+}
