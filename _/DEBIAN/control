@@ -5,5 +5,5 @@ Architecture: iphoneos-arm
 Description: PrivateSMS7
 Author: Timm Kandziora
 Section: Tweaks
-Version: 1.1-1
-Installed-Size: 204
+Version: 2.0-1
+Installed-Size: 360

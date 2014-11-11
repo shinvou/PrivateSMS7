@@ -7,6 +7,7 @@ PSMS7Settings_FILES = PSMS7Settings.mm
 PSMS7Settings_INSTALL_PATH = /Library/PreferenceBundles
 PSMS7Settings_FRAMEWORKS = UIKit
 PSMS7Settings_PRIVATE_FRAMEWORKS = Preferences
+PSMS7Settings_CFLAGS = -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/bundle.mk
 

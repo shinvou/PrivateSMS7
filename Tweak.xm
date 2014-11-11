@@ -2,16 +2,21 @@
 //  Tweak.xm
 //  PrivateSMS7
 //
-//  Created by Timm Kandziora on 26.07.14.
+//  Created by Timm Kandziora on 11.11.14.
 //  Copyright (c) 2014 Timm Kandziora. All rights reserved.
 //
 
 @interface CKConversationListController : UIViewController <UITableViewDataSource, UITableViewDelegate> {
     UITableView *_table;
 }
-- (id)tableView:(id)view cellForRowAtIndexPath:(id)indexPath;
-- (void)setEditing:(BOOL)editing animated:(BOOL)animated;
+// Legacy
 - (void)composeButtonClicked:(id)clicked;
+- (void)setEditing:(BOOL)editing animated:(BOOL)animated;
+// iOS 7
+- (id)tableView:(id)view cellForRowAtIndexPath:(id)indexPath;
+// iOS 8
+- (int)tableView:(id)view numberOfRowsInSection:(int)section;
+- (void)_updateToolbarItems;
 @end
 
 @interface CKConversationSearcher : NSObject
@@ -25,6 +30,7 @@ static BOOL saveState = NO;
 static UIBarButtonItem *switchButton = nil;
 static UIBarButtonItem *composeButton = nil;
 
+%group iOS7
 %hook CKConversationListController
 
 %new - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -48,6 +54,41 @@ static UIBarButtonItem *composeButton = nil;
     }
 }
 
+%end
+%end
+
+%group iOS8
+%hook CKConversationListController
+
+- (int)tableView:(id)tableView numberOfRowsInSection:(int)section
+{
+    if (hidden) {
+        return 0;
+    } else {
+        return %orig;
+    }
+}
+
+- (void)_updateToolbarItems
+{
+    if (!hidden) {
+        %orig;
+    }
+}
+
+%end
+%end
+
+%group Legacy
+%hook CKConversationListController
+
+- (void)composeButtonClicked:(id)clicked
+{
+    if (!hidden) {
+        %orig;
+    }
+}
+
 - (void)setEditing:(BOOL)editing animated:(BOOL)animated
 {
     %orig;
@@ -59,20 +100,12 @@ static UIBarButtonItem *composeButton = nil;
             composeButton = [[self navigationItem].rightBarButtonItem retain];
 
             switchButton = [[UIBarButtonItem alloc] initWithTitle:@"Unhide" style:UIBarButtonItemStylePlain target:self action:@selector(switch)];
+            switchButton.title = (hidden) ? @"Unhide" : @"Hide";
         }
 
         [[self navigationItem] setRightBarButtonItem:switchButton animated:YES];
     } else {
         [[self navigationItem] setRightBarButtonItem:composeButton animated:YES];
-    }
-}
-
-- (void)composeButtonClicked:(id)clicked
-{
-    if (hidden) {
-        return;
-    } else {
-        %orig;
     }
 }
 
@@ -106,29 +139,13 @@ static UIBarButtonItem *composeButton = nil;
 }
 
 %end
+%end
 
 static void ReloadSettings()
 {
-    NSMutableDictionary *settings = [[NSMutableDictionary alloc] initWithContentsOfFile:settingsPath];
-
-    if (settings) {
-        if ([settings objectForKey:@"saveState"]) {
-            system("killall -9 MobileSMS");
-
-            saveState = [[settings objectForKey:@"saveState"] boolValue];
-
-            if (saveState) {
-                if ([settings objectForKey:@"isHidden"]) {
-                    hidden = [[settings objectForKey:@"isHidden"] boolValue];
-                } else {
-                    [settings setObject:[NSNumber numberWithBool:YES] forKey:@"isHidden"];
-                    [settings writeToFile:settingsPath atomically:YES];
-                }
-            }
-        }
-    }
-
-    [settings release];
+    // 'system' is deprecated: first deprecated in iOS 8.0 - Use posix_spawn APIs instead.
+    // Because 'system' is easier to use I'll use it as long as it works
+    system("killall -9 MobileSMS");
 }
 
 static void ReloadSettingsOnStartup()
@@ -155,8 +172,21 @@ static void ReloadSettingsOnStartup()
 
 %ctor {
 	@autoreleasepool {
-		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)ReloadSettings, CFSTR("com.shinvou.privatesms7/reloadSettings"), NULL, CFNotificationSuspensionBehaviorCoalesce);
+		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+                                        NULL,
+                                        (CFNotificationCallback)ReloadSettings,
+                                        CFSTR("com.shinvou.privatesms7/reloadSettings"),
+                                        NULL,
+                                        CFNotificationSuspensionBehaviorCoalesce);
 
 		ReloadSettingsOnStartup();
+
+        if ([[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0) {
+            %init(iOS8);
+        } else {
+            %init(iOS7);
+        }
+
+        %init(Legacy);
 	}
 }

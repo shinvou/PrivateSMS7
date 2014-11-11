@@ -3,7 +3,7 @@
 		bundle = PSMS7Settings;
 		cell = PSLinkCell;
 		detail = "PSMS7SettingsListController";
-		icon = "PSMS7Settings@2x.png";
+		icon = "PSMS7Settings.png";
 		isController = 1;
 		label = PrivateSMS7;
 	};

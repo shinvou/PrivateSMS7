@@ -1,7 +1,7 @@
 Package: com.shinvou.PrivateSMS7
 Name: PrivateSMS7
 Depends: mobilesubstrate
-Version: 1.1
+Version: 2.0
 Architecture: iphoneos-arm
 Description: PrivateSMS7
 Author: Timm Kandziora
